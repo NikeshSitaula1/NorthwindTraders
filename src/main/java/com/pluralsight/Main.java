@@ -38,6 +38,7 @@ public class Main {
         }
         catch (SQLException e){
             System.out.println("There was an SQL issue: ");
+            e.printStackTrace();
         }
 
     }
