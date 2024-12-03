@@ -1,17 +1,21 @@
 package com.pluralsight;
 
 import java.sql.*;
+import org.apache.commons.dbcp2.BasicDataSource;
+import javax.sql.DataSource;
 
 public class Main {
     public static void main(String[] args)  {
 
-        try{
-            // load the MySQL Driver
-            Class.forName("com.mysql.cj.jdbc.Driver");
-        }catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            System.exit(-1);
-        }
+//class.forName way (if you did not do datasource)
+
+    //        try{
+    //            // load the MySQL Driver
+    //            Class.forName("com.mysql.cj.jdbc.Driver");
+    //        }catch (ClassNotFoundException e) {
+    //            e.printStackTrace();
+    //            System.exit(-1);
+    //        }
 
         if (args.length != 3) {
             System.out.println(
@@ -23,6 +27,11 @@ public class Main {
         String username = args[0];
         String password = args[1];
         String sqlServerAddress = args[2];
+
+        BasicDataSource dataSource = new BasicDataSource();
+        dataSource.setUrl(sqlServerAddress);
+        dataSource.setUsername(username);
+        dataSource.setPassword(password);
 
         String options = """
          =================================================
@@ -43,7 +52,7 @@ public class Main {
                 selection = Console.PromptForInt(options);
                 if (selection == 1 ){
                     try {
-                        doDatabaseProducts(username, password, sqlServerAddress);
+                        doDatabaseProducts(dataSource);
                     } catch (SQLException e) {
 
                         e.printStackTrace();
@@ -51,7 +60,7 @@ public class Main {
                 }
                 else if (selection == 2) {
                     try {
-                        doDatabaseCustomers(username, password, sqlServerAddress);
+                        doDatabaseCustomers(dataSource);
                     } catch (SQLException e) {
 
                         e.printStackTrace();
@@ -59,7 +68,7 @@ public class Main {
                 }
                 else if (selection == 3) {
                     try {
-                        doDatabaseCategories(username, password, sqlServerAddress);
+                        doDatabaseCategories(dataSource);
                     } catch (SQLException e) {
 
                         e.printStackTrace();
@@ -77,12 +86,12 @@ public class Main {
         } while (true);
     }
 
-    public static void doDatabaseProducts(String username, String password, String sqlServerAddress) throws SQLException{
+    public static void doDatabaseProducts(DataSource dataSource) throws SQLException{
 
         try
                 (
-                        Connection connection = DriverManager.getConnection(sqlServerAddress, username, password);
-                        PreparedStatement pStatement = connection.prepareStatement("SELECT * FROM products;");
+                Connection connection = dataSource.getConnection();
+                PreparedStatement pStatement = connection.prepareStatement("SELECT * FROM products;");
                 )
         {
 
@@ -90,7 +99,7 @@ public class Main {
             {
 
                 System.out.println("Product ID |  Product Name |  Unit Price    | UnitsInStock ");
-                System.out.println("--------------------------------------------------------------------------------------------------------");
+                System.out.println("---------------------------------------------------------------------------------------");
                 // process the results
                 while (results.next()) {
                     int col1 = results.getInt("productID");
@@ -108,10 +117,10 @@ public class Main {
         }
     }
 
-    public static void doDatabaseCustomers(String username, String password, String sqlServerAddress) throws SQLException{
+    public static void doDatabaseCustomers(DataSource dataSource) throws SQLException{
 
         try (
-                Connection connection = DriverManager.getConnection(sqlServerAddress, username, password);
+                Connection connection = dataSource.getConnection();
                 PreparedStatement pStatement = connection.prepareStatement("SELECT * FROM customers;");
             )
         {
@@ -136,13 +145,12 @@ public class Main {
         }
     }
 
-    public static void doDatabaseCategories(String username, String password, String sqlServerAddress) throws SQLException {
+    public static void doDatabaseCategories(DataSource dataSource) throws SQLException {
 
         try (
-                Connection connection = DriverManager.getConnection(sqlServerAddress, username, password);
+                Connection connection = dataSource.getConnection();
         )
         {
-
             try (
                     PreparedStatement pStatement = connection.prepareStatement("SELECT * FROM categories ORDER BY categoryID;");
                     ResultSet results = pStatement.executeQuery();
@@ -157,7 +165,10 @@ public class Main {
 
             int categoryID = Console.PromptForInt("Choose category ID: ");
 
-            try(PreparedStatement getProductsStatement = connection.prepareStatement("SELECT productID, productName, UnitPrice, UnitsInStock from northwind.products WHERE products.categoryID = ?");){
+            try(
+                    PreparedStatement getProductsStatement = connection.prepareStatement(
+                    "SELECT productID, productName, UnitPrice, UnitsInStock from northwind.products WHERE products.categoryID = ?");)
+            {
 
                 getProductsStatement.setInt(1, categoryID);
 
@@ -171,7 +182,6 @@ public class Main {
                     }
                 }
             }
-
         }catch (SQLException e){
             System.out.println("Error");
             e.printStackTrace();
